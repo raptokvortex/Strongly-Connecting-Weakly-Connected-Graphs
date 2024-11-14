@@ -1,31 +1,33 @@
 import networkx as nx
 import matplotlib.pyplot as plt
 
+draw = True
+
 #G = nx.DiGraph()
+G = nx.scale_free_graph(1000, seed = 4)
 
-#G = nx.gn_graph(20)
-
-G = nx.scale_free_graph(10, seed = 0)
-
-if not nx.is_weakly_connected(G):
-    quit()
+print("Weakly Connected?")
+print(nx.is_weakly_connected(G))
 
 #print(G.edges())
 
 #print("G")
-nx.draw_networkx(G, arrows = True)
-plt.show()
+if draw:
+    nx.draw_networkx(G, arrows = True)
+    plt.show()
 
 # Reduce G to its strongly connected components, with the nodes of the components being represented by a representative of G
 C = nx.condensation(G)
 
 # Since the nodes of C are relabelled, whenever we add an edge, it actually needs to be using the mapping of the nodes in C to nodes in G.
-print(C.nodes[0]['members'])
+#print(C.nodes[0]['members'])
 representatives = [list(C.nodes[i]['members'])[0] for i in range(len(C))]
+
 print(representatives)
 
-nx.draw_networkx(C, arrows = True)
-plt.show()
+if draw:
+    nx.draw_networkx(C, arrows = True)
+    plt.show()
 
 #print(C.edges())
 
@@ -72,20 +74,20 @@ visible_sinks = set(source_sink_image[first_source])
 # first make it so our first source can 'see' all sinks
 while visible_sinks != sinks:
     for source in set.difference(sources, connected_sources):
-        possible_sinks_to_add = list(set.intersection(set.difference(sinks, visible_sinks), set(source_sink_image[source])))
+        possible_sinks_to_add = list(set.intersection(set.difference(sinks, set(visible_sinks)), set(source_sink_image[source])))
 
         if len(possible_sinks_to_add) != 0:
+            connected_sinks.add(list(visible_sinks)[0])
+            edges_to_add.append((representatives[list(visible_sinks)[0]], representatives[source]))
             visible_sinks = set.union(visible_sinks, set(possible_sinks_to_add))
-            connected_sinks.add(possible_sinks_to_add[0])
             connected_sources.add(source)
-            edges_to_add.append((representatives[possible_sinks_to_add[0]], representatives[source]))
             break
 
 # now replace first source repeatedly until all sinks or all sources are connected
 
 while len(connected_sinks) < m -1 and len(connected_sources) < n - 1:
-    for source in set.difference(sources, connected_sources):
-        possible_sinks_to_add = list(set.intersection(set.difference(sinks, connected_sinks), set(source_sink_image[source])))
+    for source in set.difference(set.difference(sources, set([first_source])), connected_sources):
+        possible_sinks_to_add = list(set.difference(sinks, connected_sinks))
 
         if len(possible_sinks_to_add) != 0:
             connected_sinks.add(possible_sinks_to_add[0])
@@ -93,13 +95,18 @@ while len(connected_sinks) < m -1 and len(connected_sources) < n - 1:
             edges_to_add.append((representatives[possible_sinks_to_add[0]], representatives[first_source]))
             first_source = source
 
-# we are now potentially left with 1 source and 1 sink, 1 source and k sinks, or k sources and 1 sink
+# we are now in the state where either all sources or all sinks are connected, so we just connect the remainder
 
 # in any case we connect the 1 to all the others
 
 for source in set.difference(sources, connected_sources):
-    for sink in set.difference(sinks, connected_sinks):
-        edges_to_add.append((representatives[sink], representatives[source]))
+    edges_to_add.append((representatives[list(sinks)[0]], representatives[source]))
+
+for sink in set.difference(sinks, connected_sinks):
+    edges_to_add.append((representatives[sink], representatives[list(sources)[0]]))
+    
+    
+
 
 connected_sinks = sinks
 connected_sources = sources
@@ -128,6 +135,8 @@ print(edges_required)
 
 #nx.write_gexf(C, "condensed.gexf")
 #nx.write_gexf(P, "augmented.gexf")
-nx.draw_networkx(P, arrows = True)
-plt.show()
+if draw:
+    nx.draw_networkx(P, arrows = True)
+    plt.show()
+print("Strongly Connected?")
 print(nx.is_strongly_connected(P))
