@@ -34,7 +34,7 @@ if draw:
 #print("Condensation of G")
 #nx.draw(C)
 
-source_sink_image = dict()  # the dictionary of sinks each source points at
+vision = dict()  # the dictionary of sinks each source points at
 sinks = set()
 sources = set()
 
@@ -48,14 +48,15 @@ for node in C:
 
 # this is not quite working properly
 # it's not returning the full list of verticies that each source can see
-source_sink_image = dict()
+# This is calculating the visions of each source
+vision = dict()
 for source in sources:
     descendants = nx.descendants(C, source)
-    source_sink_image[source] = set.intersection(set(descendants),sinks)
+    vision[source] = set.intersection(set(descendants),sinks)
 
 print(sources)
 print(sinks)
-print(source_sink_image)
+print(vision)
 
 ### given directed bi graph of sources and sinks, represented by sources, sinks and dictionary of successors of sources
 
@@ -69,12 +70,12 @@ connected_sinks = set()
 connected_sources = set()
 
 first_source = list(sources)[0]
-visible_sinks = set(source_sink_image[first_source])
+visible_sinks = set(vision[first_source])
 
 # first make it so our first source can 'see' all sinks
 while visible_sinks != sinks:
     for source in set.difference(sources, connected_sources):
-        possible_sinks_to_add = list(set.intersection(set.difference(sinks, set(visible_sinks)), set(source_sink_image[source])))
+        possible_sinks_to_add = list(set.intersection(set.difference(sinks, set(visible_sinks)), set(vision[source])))
 
         if len(possible_sinks_to_add) != 0:
             connected_sinks.add(list(visible_sinks)[0])
