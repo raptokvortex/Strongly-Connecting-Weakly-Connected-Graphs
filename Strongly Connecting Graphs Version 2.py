@@ -1,7 +1,12 @@
 import networkx as nx
 import matplotlib.pyplot as plt
+import Visions
 
-draw = True
+draw = True # If we want to draw the Graph, Condensation, and Augmented graph
+how_to_find_visions = 2 # 0 - Use networkx implementation of descendants (Not sure how it works, but probably as inefficient as below)
+                        # 1 - Use our DFS (depth first search) based implementation of descendants (inefficient, as we have to cover some vertices and edges twice when looking at each source)
+                        # 2 - Use our DFS based algorithm for finding visions only (Should be O(V+E), as only checks each vertex and edge once, and so is optimal in some sense)
+debug = True # Outputs some intermediate steps if True, like visions, sources etc
 
 #G = nx.DiGraph()
 G = nx.scale_free_graph(100, seed = 4)
@@ -29,28 +34,49 @@ if draw:
     nx.draw_networkx(C, arrows = True)
     plt.show()
 
-vision = dict()  # the dictionary of sinks each source points at
-sinks = set() # The set of sinks
-sources = set() # The set of source
+# Using networkx implementation
+if how_to_find_visions == 0:
+    vision = dict()  # the dictionary of sinks each source points at
+    sinks = set() # The set of sinks
+    sources = set() # The set of source
 
 
-# Find the set of sinks, and sources
-for node in C:
-    if C.in_degree(node) == 0: # A source if in degree is zero
-        sources.add(node)
-    if C.out_degree(node) == 0: # A sink if out degree is zero
-        sinks.add(node)
+    # Find the set of sinks, and sources
+    for node in C:
+        if C.in_degree(node) == 0: # A source if in degree is zero
+            sources.add(node)
+        if C.out_degree(node) == 0: # A sink if out degree is zero
+            sinks.add(node)
 
 
-# This is calculating the visions of each source
-vision = dict()
-for source in sources:
-    descendants = nx.descendants(C, source)
-    vision[source] = set.intersection(set(descendants),sinks)
+    # This is calculating the visions of each source
+    vision = dict()
+    for source in sources:
+        descendants = nx.descendants(C, source)
+        vision[source] = set.intersection(set(descendants),sinks)
 
-print(sources)
-print(sinks)
-print(vision)
+# Using a dfs based implementation to find descendants
+elif how_to_find_visions == 1:
+    pass # Waner to put code here
+
+# Using our own implementation to efficiently find visions
+elif how_to_find_visions == 2:
+    sources, sinks, vision = Visions.vision_finder(C)
+
+else:
+    print("Selection of vision method incorrect. Please choose 0, 1 or 2")
+
+if debug:
+    print("************************")
+    print("Sources:")
+    print(sources)
+    print("************************")
+    print("Sinks:")
+    print(sinks)
+    print("************************")
+    print("Vision:")
+    print(vision)
+    print("************************")
 
 ### given directed bi graph of sources and sinks, represented by sources, sinks and dictionary of successors of sources
 
@@ -112,15 +138,17 @@ P = G.copy()
 #print(edges_to_add)
 P.add_edges_from(edges_to_add)
 
-print("Added edges:")
-print(edges_to_add)
 
-print("Sources")
-print(n)
-print("Sinks")
-print(m)
-print("Edges Required")
-print(edges_required)
+if debug:
+    print("Added edges:")
+    print(edges_to_add)
+
+    print("Sources")
+    print(n)
+    print("Sinks")
+    print(m)
+    print("Edges Required")
+    print(edges_required)
 
 
 if draw:
