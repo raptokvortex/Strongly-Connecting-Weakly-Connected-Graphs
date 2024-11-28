@@ -5,20 +5,26 @@ import Condensations
 
 draw = True # If we want to draw the Graph, Condensation, and Augmented graph
 debug = True # Outputs some intermediate steps if True, like visions, sources etc
-how_to_find_visions = 1 # 0 - Use networkx implementation of descendants (Not sure how it works, but probably as inefficient as below)
-                        # 1 - Use our DFS (depth first search) based implementation of descendants (inefficient, as we have to cover some vertices and edges twice when looking at each source)
+how_to_find_visions = 2 # 0 - Use networkx implementation of descendants # Must be set to 2 if the graph is disconnected
+                        # 1 - Use our DFS (depth first search) based implementation of descendants (inefficient, as we have to cover some vertices and edges twice when looking at each source) # Must be set to 2 if the graph is disconnected
                         # 2 - Use our DFS based algorithm for finding visions only (Should be O(V+E), as only checks each vertex and edge once, and so is optimal in some sense)
 how_to_find_condensations = 1 # 0 Use networkxx implementation of condensation (Should be O(V+E), using an appropriate algorithm)
                               # 1 Use our implementation to find a condensation (We think this may be as bad as O(V**2)). Specifically O(V(V+E))
+final_readout = True # If we want the final read out of the number of edges we added, the number of sources and sinks in the condensation, and whether we indeed did strongly connect the graph (using networkx method)
+weakly_connected_check = True # Check if the graph was weakly connected in the first place, and prints out if it was
+disconnected_possibility = True # If the graph was disconnected, the way the algorithm is currently implemented, we could possibly add a spurious edge of a node to itself. Set this to true to remove the edge
+
+G = nx.DiGraph()
+
+G.add_nodes_from([1,2,3,4,5,6,7,8,9])
 
 
-#G = nx.DiGraph()
-G = nx.scale_free_graph(10, seed = 0)
+G.add_edges_from([(1,2),(2,3),(3,1),(4,5),(5,6),(6,4),(7,8),(8,9), (9,7)])
 
-print("Weakly Connected?")
-print(nx.is_weakly_connected(G))
 
-#print(G.edges())
+if weakly_connected_check:
+    print("Weakly Connected?")
+    print(nx.is_weakly_connected(G))
 
 #print("G")
 if draw:
@@ -45,6 +51,10 @@ elif how_to_find_condensations == 1:
 
 else:
     print("Selection of condensation method incorrect. Please choose 0, 1")
+
+# A quick to check if the graph was strongly connected. If it was we are left with a single node
+if len(C) == 1:
+    print("Graph was already strongly connected")
 
 if draw:
     nx.draw_networkx(C, arrows = True)
@@ -156,7 +166,7 @@ while len(connected_sinks) < m -1 and len(connected_sources) < n - 1:
 
 # we are now in the state where either all sources or all sinks are connected, so we just connect the remainder
 
-# in any case we connect the 1 to all the others
+# in either case we connect the 1 to all the others
 
 for source in set.difference(sources, connected_sources):
     edges_to_add.append((representatives[list(sinks)[0]], representatives[source]))
@@ -164,6 +174,15 @@ for source in set.difference(sources, connected_sources):
 for sink in set.difference(sinks, connected_sinks):
     edges_to_add.append((representatives[sink], representatives[list(sources)[0]]))
     
+
+if disconnected_possibility:
+    edges_to_remove = []
+    for edge in edges_to_add:
+        if edge[0] == edge[1]:
+            edges_to_remove.append(edge)
+    
+    for edge in edges_to_remove:
+        edges_to_add.remove(edge)
 
 edges_required = len(edges_to_add)
 
@@ -176,9 +195,9 @@ if debug:
     print("Added edges:")
     print(edges_to_add)
 
-    print("Sources")
+    print("Condensation's Sources")
     print(n)
-    print("Sinks")
+    print("Condenssation's Sinks")
     print(m)
     print("Edges Required")
     print(edges_required)
@@ -187,5 +206,17 @@ if debug:
 if draw:
     nx.draw_networkx(P, arrows = True)
     plt.show()
-print("Strongly Connected?")
-print(nx.is_strongly_connected(P))
+
+if debug:
+    print("Added edges:")
+    print(edges_to_add)
+
+if final_readout:
+    print("Condensation's Sources")
+    print(n)
+    print("Condenssation's Sinks")
+    print(m)
+    print("Edges Required")
+    print(edges_required)
+    print("Strongly Connected?")
+    print(nx.is_strongly_connected(P))
