@@ -1,15 +1,19 @@
 import networkx as nx
 import matplotlib.pyplot as plt
 import Visions
+import Condensations
 
 draw = True # If we want to draw the Graph, Condensation, and Augmented graph
-how_to_find_visions = 2 # 0 - Use networkx implementation of descendants (Not sure how it works, but probably as inefficient as below)
+debug = True # Outputs some intermediate steps if True, like visions, sources etc
+how_to_find_visions = 1 # 0 - Use networkx implementation of descendants (Not sure how it works, but probably as inefficient as below)
                         # 1 - Use our DFS (depth first search) based implementation of descendants (inefficient, as we have to cover some vertices and edges twice when looking at each source)
                         # 2 - Use our DFS based algorithm for finding visions only (Should be O(V+E), as only checks each vertex and edge once, and so is optimal in some sense)
-debug = True # Outputs some intermediate steps if True, like visions, sources etc
+how_to_find_condensations = 1 # 0 Use networkxx implementation of condensation (Should be O(V+E), using an appropriate algorithm)
+                              # 1 Use our implementation to find a condensation (We think this may be as bad as O(V**2)). Specifically O(V(V+E))
+
 
 #G = nx.DiGraph()
-G = nx.scale_free_graph(100, seed = 4)
+G = nx.scale_free_graph(10, seed = 0)
 
 print("Weakly Connected?")
 print(nx.is_weakly_connected(G))
@@ -21,14 +25,26 @@ if draw:
     nx.draw_networkx(G, arrows = True)
     plt.show()
 
-# Reduce G to its strongly connected components, with the nodes of the components being represented by a representative of G
-C = nx.condensation(G)
+# networkx method to find condensation
+if how_to_find_condensations == 0:
+    # Reduce G to its strongly connected components, with the nodes of the components being represented by a representative of G
+    C = nx.condensation(G)
 
-# Since the nodes of C are relabelled, whenever we add an edge, it actually needs to be using the mapping of the nodes in C to nodes in G.
-#print(C.nodes[0]['members'])
-representatives = [list(C.nodes[i]['members'])[0] for i in range(len(C))]
+    # Since the nodes of C are relabelled, whenever we add an edge, it actually needs to be using the mapping of the nodes in C to nodes in G.
+    #print(C.nodes[0]['members'])
+    representatives = [list(C.nodes[i]['members'])[0] for i in range(len(C))]
 
-print(representatives)
+    # print(representatives)
+
+# our method to find condensation
+elif how_to_find_condensations == 1:
+    C = Condensations.condensation(G)
+
+    # Since we labelled our nodes in a sensible way already, we make a list with each entry its own label
+    representatives = [i for i in range(0,len(G))]
+
+else:
+    print("Selection of condensation method incorrect. Please choose 0, 1")
 
 if draw:
     nx.draw_networkx(C, arrows = True)
@@ -57,7 +73,24 @@ if how_to_find_visions == 0:
 
 # Using a dfs based implementation to find descendants
 elif how_to_find_visions == 1:
-    pass # Waner to put code here
+    vision = dict()  # the dictionary of sinks each source points at
+    sinks = set() # The set of sinks
+    sources = set() # The set of source
+
+
+    # Find the set of sinks, and sources
+    for node in C:
+        if C.in_degree(node) == 0: # A source if in degree is zero
+            sources.add(node)
+        if C.out_degree(node) == 0: # A sink if out degree is zero
+            sinks.add(node)
+
+
+    # This is calculating the visions of each source
+    vision = dict()
+    for source in sources:
+        descendants = Condensations.find_descendants(C, source)
+        vision[source] = set.intersection(set(descendants),sinks)
 
 # Using our own implementation to efficiently find visions
 elif how_to_find_visions == 2:
@@ -81,7 +114,7 @@ if debug:
 ### given directed bi graph of sources and sinks, represented by sources, sinks and dictionary of successors of sources
 
 
-m= len(sinks)
+m = len(sinks)
 n = len(sources)
 
 edges_to_add = list()
