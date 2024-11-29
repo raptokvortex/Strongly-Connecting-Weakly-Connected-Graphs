@@ -19,8 +19,8 @@ def strong_connector(G, how_to_find_visions = 2, how_to_find_condensations = 0, 
     debug = False # Outputs some intermediate steps if True, like visions, sources etc
     weakly_connected_check = False # Check if the graph was weakly connected in the first place, and prints out if it was
     """
-
-
+    ihatemyself = True
+    
     if weakly_connected_check:
         print("Weakly Connected?")
         print(nx.is_weakly_connected(G))
@@ -169,11 +169,28 @@ def strong_connector(G, how_to_find_visions = 2, how_to_find_condensations = 0, 
 
     # in either case we connect the 1 to all the others
 
-    for source in set.difference(sources, connected_sources):
-        edges_to_add.append((representatives[list(sinks)[0]], representatives[source]))
+    # in either case we connect the 1 to all the others
+    remaining_sources = list(set.difference(sources, connected_sources))
+    remaining_sinks = list(set.difference(sinks, connected_sinks))
 
-    for sink in set.difference(sinks, connected_sinks):
-        edges_to_add.append((representatives[sink], representatives[list(sources)[0]]))
+    if debug:
+        print("remaining sources")
+        print(remaining_sources)
+
+        print("remaining sinks")
+        print(remaining_sinks)
+    
+    if len(remaining_sinks) == 1:
+        for source in remaining_sources:
+            edges_to_add.append((representatives[remaining_sinks[0]], representatives[source]))
+            print("I added the following edge in step 3")
+            print(edges_to_add[-1])
+
+    else:
+        for sink in remaining_sinks:
+            edges_to_add.append((representatives[sink], representatives[remaining_sources[0]]))
+            print("I added the following edge in step 3")
+            print(edges_to_add[-1])
         
 
     if disconnected_possibility:
@@ -193,6 +210,9 @@ def strong_connector(G, how_to_find_visions = 2, how_to_find_condensations = 0, 
 
 
     if debug:
+
+        
+
         print("Added edges:")
         print(edges_to_add)
 
@@ -222,5 +242,8 @@ def strong_connector(G, how_to_find_visions = 2, how_to_find_condensations = 0, 
         print("Strongly Connected?")
         print(nx.is_strongly_connected(P))
     
+    if ihatemyself:
+        return P, edges_to_add, representatives
+
     return P
 

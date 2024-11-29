@@ -19,7 +19,7 @@ G = nx.DiGraph()
 G.add_nodes_from([1,2,3,4,5,6,7,8,9])
 
 
-G.add_edges_from([(1,2),(2,3),(3,1),(4,5),(5,6),(6,4),(7,8),(8,9), (9,7)])
+G.add_edges_from([(1,2),(2,3),(3,1),(4,5),(5,6),(6,4),(7,8),(8,9), (9,7), (2,4), (2,7)])
 
 
 if weakly_connected_check:
@@ -146,6 +146,8 @@ while visible_sinks != sinks:
             sink_to_add = list(set.difference(visible_sinks, connected_sinks))[0] # We connect an unconnected sink in the visible sinks, to the source we chose.
             connected_sinks.add(sink_to_add) # the sink is now connected, and no longer a sink
             edges_to_add.append((representatives[sink_to_add], representatives[source])) # We record the edge we add to our original graph
+            print("I added the following edge in step 1")
+            print(edges_to_add[-1])
             visible_sinks = set.union(visible_sinks, set(possible_sinks_to_add)) # We update the list of visible sinks
             connected_sources.add(source) # the source is now connected, and no longer a source
             break
@@ -162,17 +164,29 @@ while len(connected_sinks) < m -1 and len(connected_sources) < n - 1:
             connected_sinks.add(possible_sinks_to_add[0]) # We connect the sink identified
             connected_sources.add(first_source) # Connect the first source
             edges_to_add.append((representatives[possible_sinks_to_add[0]], representatives[first_source])) # Add the edge between the sink and the first source
+            print("I added the following edge in step 2")
+            print(edges_to_add[-1])
             first_source = source # Replace the first source, so we can apply the same algorithm again
 
 # we are now in the state where either all sources or all sinks are connected, so we just connect the remainder
 
 # in either case we connect the 1 to all the others
+remaining_sources = set.difference(sources, connected_sources)
+remaining_sinks = set.difference(sinks, connected_sinks)
 
-for source in set.difference(sources, connected_sources):
-    edges_to_add.append((representatives[list(sinks)[0]], representatives[source]))
+print(remaining_sinks)
+print(remaining_sources)
+if len(remaining_sinks) == 1:
+    for source in remaining_sources:
+        edges_to_add.append((representatives[list(sinks)[0]], representatives[source]))
+        print("I added the following edge in step 3")
+        print(edges_to_add[-1])
 
-for sink in set.difference(sinks, connected_sinks):
-    edges_to_add.append((representatives[sink], representatives[list(sources)[0]]))
+elif len(remaining_sources) == 1:
+    for sink in remaining_sinks:
+        edges_to_add.append((representatives[sink], representatives[list(sources)[0]]))
+        print("I added the following edge in step 3")
+        print(edges_to_add[-1])
     
 
 if disconnected_possibility:
@@ -197,7 +211,7 @@ if debug:
 
     print("Condensation's Sources")
     print(n)
-    print("Condenssation's Sinks")
+    print("Condensation's Sinks")
     print(m)
     print("Edges Required")
     print(edges_required)
