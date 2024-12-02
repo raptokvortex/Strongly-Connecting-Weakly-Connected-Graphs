@@ -1,16 +1,14 @@
 # This is just a function implementation of our algorithm to strongly connect a graph
 import networkx as nx
 import matplotlib.pyplot as plt
-import Visions
 import Condensations
+from faststep1 import fast_step_1
 
-def strong_connector(G, how_to_find_visions = 2, how_to_find_condensations = 0, disconnected_possibility = False, final_readout = False, draw = False, debug = False, weakly_connected_check = False ):
+def fast_strong_connector(G, how_to_find_condensations = 0, disconnected_possibility = False, final_readout = False, draw = False, debug = False, weakly_connected_check = False ):
     """
-    Take a directed networkx graph G, and returns a graph with a minimal number of edges added in order to strongly connect it.
+    Take a directed networkx graph G, and returns a graph with a minimal number of edges added in order to strongly connect it. Does step 1 of the algorithm in a fast way, but relies on our method for finding visions in order to do so
     G - a networkx DiGraph object, representing a directed graph. If disconnected ensure disconnected possibility is True, and that how_to_find_visions = 2
-    how_to_find_visions = 2 # 0 - Use networkx implementation of descendants # Must be set to 2 if the graph is disconnected
-                            # 1 - Use our DFS (depth first search) based implementation of descendants (inefficient, as we have to cover some vertices and edges twice when looking at each source) # Must be set to 2 if the graph is disconnected
-                            # 2 - Use our DFS based algorithm for finding visions only (Should be O(V+E), as only checks each vertex and edge once, and so is optimal in some sense)
+    how_to_find_visions = 2 # 2 - Use our DFS based algorithm for finding visions only (Should be O(V+E), as only checks each vertex and edge once, and so is optimal in some sense)
     how_to_find_condensations = 1 # 0 Use networkxx implementation of condensation (Should be O(V+E), using an appropriate algorithm)
                                   # 1 Use our implementation to find a condensation (We think this may be as bad as O(V**2)). Specifically O(V(V+E))
     disconnected_possibility = True # If the graph was disconnected, the way the algorithm is currently implemented, we could possibly add a spurious edge of a node to itself. Set this to true to remove the edge
@@ -60,56 +58,49 @@ def strong_connector(G, how_to_find_visions = 2, how_to_find_condensations = 0, 
         nx.draw_networkx(C, arrows = True)
         plt.show()
 
-    # Using networkx implementation
-    if how_to_find_visions == 0:
-        vision = dict()  # the dictionary of sinks each source points at
-        sinks = set() # The set of sinks
-        sources = set() # The set of source
+    # # Using networkx implementation
+    # if how_to_find_visions == 0:
+    #     source_vision = dict()  # the dictionary of sinks each source points at
+    #     sinks = set() # The set of sinks
+    #     sources = set() # The set of source
 
 
-        # Find the set of sinks, and sources
-        for node in C:
-            if C.in_degree(node) == 0: # A source if in degree is zero
-                sources.add(node)
-            if C.out_degree(node) == 0: # A sink if out degree is zero
-                sinks.add(node)
+    #     # Find the set of sinks, and sources
+    #     for node in C:
+    #         if C.in_degree(node) == 0: # A source if in degree is zero
+    #             sources.add(node)
+    #         if C.out_degree(node) == 0: # A sink if out degree is zero
+    #             sinks.add(node)
 
 
-        # This is calculating the visions of each source
-        vision = dict()
-        for source in sources:
-            descendants = nx.descendants(C, source)
-            vision[source] = set.intersection(set(descendants),sinks)
+    #     # This is calculating the visions of each source
+    #     source_vision = dict()
+    #     for source in sources:
+    #         descendants = nx.descendants(C, source)
+    #         source_vision[source] = set.intersection(set(descendants),sinks)
 
-    # Using a dfs based implementation to find descendants
-    elif how_to_find_visions == 1:
-        vision = dict()  # the dictionary of sinks each source points at
-        sinks = set() # The set of sinks
-        sources = set() # The set of source
-
-
-        # Find the set of sinks, and sources
-        for node in C:
-            if C.in_degree(node) == 0: # A source if in degree is zero
-                sources.add(node)
-            if C.out_degree(node) == 0: # A sink if out degree is zero
-                sinks.add(node)
+    # # Using a dfs based implementation to find descendants
+    # elif how_to_find_visions == 1:
+    #     source_vision = dict()  # the dictionary of sinks each source points at
+    #     sinks = set() # The set of sinks
+    #     sources = set() # The set of source
 
 
-        # This is calculating the visions of each source
-        vision = dict()
-        for source in sources:
-            descendants = Condensations.find_descendants(C, source)
-            vision[source] = set.intersection(set(descendants),sinks)
+    #     # Find the set of sinks, and sources
+    #     for node in C:
+    #         if C.in_degree(node) == 0: # A source if in degree is zero
+    #             sources.add(node)
+    #         if C.out_degree(node) == 0: # A sink if out degree is zero
+    #             sinks.add(node)
 
-    # Using our own implementation to efficiently find visions
-    elif how_to_find_visions == 2:
-        sources, sinks, vision = Visions.vision_finder(C)
-        sources = set(sources)
-        sinks = set(sinks)
 
-    else:
-        print("Selection of vision method incorrect. Please choose 0, 1 or 2")
+    #     # This is calculating the visions of each source
+    #     source_vision = dict()
+    #     for source in sources:
+    #         descendants = Condensations.find_descendants(C, source)
+    #         source_vision[source] = set.intersection(set(descendants),sinks)
+
+    sources, sinks, source_vision, sink_pre_vision, sink_cover, unique_sinks = fast_step_1(C)
 
     if debug:
         print("************************")
@@ -120,7 +111,7 @@ def strong_connector(G, how_to_find_visions = 2, how_to_find_condensations = 0, 
         print(sinks)
         print("************************")
         print("Vision:")
-        print(vision)
+        print(source_vision)
         print("************************")
 
     ### given directed bi graph of sources and sinks, represented by sources, sinks and dictionary of successors of sources
@@ -130,32 +121,39 @@ def strong_connector(G, how_to_find_visions = 2, how_to_find_condensations = 0, 
     n = len(sources)
 
     edges_to_add = list()
-    visible_sinks = set()
     connected_sinks = set()
     connected_sources = set()
 
-    first_source = list(sources)[0]
-    visible_sinks = set(vision[first_source])
+    first_source = sink_cover[0]
 
-    # first make it so our first source can 'see' all sinks
-    while visible_sinks != sinks:
+    for i in range(1, len(sink_cover)):
+        if debug:
+            print("Step 1 Occurred")
+        connected_sources.add(sink_cover[i])
+        connected_sinks.add(unique_sinks[i-1])
+        edges_to_add.append((representatives[unique_sinks[i-1]], representatives[sink_cover[i]])) # Add the edge between the sink and the first source
+
+
+    # # first make it so our first source can 'see' all sinks
+    # while visible_sinks != sinks:
         
-        for source in set.difference(sources, connected_sources):
-            if debug:
-                print("Step 1 Occurred")
-            # Find any possible sinks our selected source can't see yet
-            possible_sinks_to_add = list(set.intersection(set.difference(sinks, set(visible_sinks)), set(vision[source])))
+    #     for source in set.difference(sources, connected_sources):
+    #         if debug:
+    #             print("Step 1 Occurred")
+    #         # Find any possible sinks our selected source can't see yet
+    #         possible_sinks_to_add = list(set.intersection(set.difference(sinks, set(visible_sinks)), set(source_vision[source])))
 
-            #If there is a sink we haven't added that can be seen by the source we chose, but not the original source, add it.
-            if len(possible_sinks_to_add) != 0:
-                sink_to_add = list(set.difference(visible_sinks, connected_sinks))[0] # We connect an unconnected sink in the visible sinks, to the source we chose.
-                connected_sinks.add(sink_to_add) # the sink is now connected, and no longer a sink
-                edges_to_add.append((representatives[sink_to_add], representatives[source])) # We record the edge we add to our original graph
-                visible_sinks = set.union(visible_sinks, set(possible_sinks_to_add)) # We update the list of visible sinks
-                connected_sources.add(source) # the source is now connected, and no longer a source
-                break
+    #         #If there is a sink we haven't added that can be seen by the source we chose, but not the original source, add it.
+    #         if len(possible_sinks_to_add) != 0:
+    #             sink_to_add = list(set.difference(visible_sinks, connected_sinks))[0] # We connect an unconnected sink in the visible sinks, to the source we chose.
+    #             connected_sinks.add(sink_to_add) # the sink is now connected, and no longer a sink
+    #             edges_to_add.append((representatives[sink_to_add], representatives[source])) # We record the edge we add to our original graph
+    #             visible_sinks = set.union(visible_sinks, set(possible_sinks_to_add)) # We update the list of visible sinks
+    #             connected_sources.add(source) # the source is now connected, and no longer a source
+    #             break
 
-
+    sources = set(sources)
+    sinks = set(sinks)
 
     # now replace first source repeatedly until all sinks or all sources except one are connected
 
@@ -226,7 +224,7 @@ def strong_connector(G, how_to_find_visions = 2, how_to_find_condensations = 0, 
 
         print("Condensation's Sources")
         print(n)
-        print("Condenssation's Sinks")
+        print("Condensation's Sinks")
         print(m)
         print("Edges Required")
         print(edges_required)
@@ -243,7 +241,7 @@ def strong_connector(G, how_to_find_visions = 2, how_to_find_condensations = 0, 
     if final_readout:
         print("Condensation's Sources")
         print(n)
-        print("Condenssation's Sinks")
+        print("Condensation's Sinks")
         print(m)
         print("Edges Required")
         print(edges_required)
