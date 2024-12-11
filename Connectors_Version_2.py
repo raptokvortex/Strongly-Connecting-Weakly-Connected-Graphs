@@ -8,7 +8,7 @@ def fast_strong_connector(G, how_to_find_condensations = 0, disconnected_possibi
     """
     Take a directed networkx graph G, and returns a graph with a minimal number of edges added in order to strongly connect it. Does step 1 of the algorithm in a fast way, but relies on our method for finding visions in order to do so
     G - a networkx DiGraph object, representing a directed graph. If disconnected ensure disconnected possibility is True, and that how_to_find_visions = 2
-    how_to_find_visions = 2 # 2 - Use our DFS based algorithm for finding visions only (Should be O(V+E), as only checks each vertex and edge once, and so is optimal in some sense)
+    how_to_find_visions = 2 # 2 - Use our BFS based algorithm for finding visions only (Should be O(V+E), as only checks each vertex and edge once, and so is optimal in some sense)
     how_to_find_condensations = 1 # 0 Use networkxx implementation of condensation (Should be O(V+E), using an appropriate algorithm)
                                   # 1 Use our implementation to find a condensation (We think this may be as bad as O(V**2)). Specifically O(V(V+E))
     disconnected_possibility = True # If the graph was disconnected, the way the algorithm is currently implemented, we could possibly add a spurious edge of a node to itself. Set this to true to remove the edge
@@ -17,14 +17,15 @@ def fast_strong_connector(G, how_to_find_condensations = 0, disconnected_possibi
     debug = False # Outputs some intermediate steps if True, like visions, sources etc
     weakly_connected_check = False # Check if the graph was weakly connected in the first place, and prints out if it was
     """
-    
+    # Weakly Connected Check
     if weakly_connected_check:
         print("Weakly Connected?")
         print(nx.is_weakly_connected(G))
 
-    #print("G")
+    # Draw the initial graph for debugging
     if draw:
         nx.draw_networkx(G, arrows = True)
+        plt.title('G')
         plt.show()
 
     # networkx method to find condensation
@@ -33,10 +34,8 @@ def fast_strong_connector(G, how_to_find_condensations = 0, disconnected_possibi
         C = nx.condensation(G)
 
         # Since the nodes of C are relabelled, whenever we add an edge, it actually needs to be using the mapping of the nodes in C to nodes in G.
-        #print(C.nodes[0]['members'])
         representatives = [list(C.nodes[i]['members'])[0] for i in range(len(C))]
 
-        # print(representatives)
 
     # our method to find condensation
     elif how_to_find_condensations == 1:
@@ -54,53 +53,22 @@ def fast_strong_connector(G, how_to_find_condensations = 0, disconnected_possibi
             print("Graph is already strongly connected, and therefore no edges were added")
         return G
 
+    # Show the condenseded intermediate step if draw is True
     if draw:
         nx.draw_networkx(C, arrows = True)
+        plt.title('Condensed Graph')
         plt.show()
 
-    # # Using networkx implementation
-    # if how_to_find_visions == 0:
-    #     source_vision = dict()  # the dictionary of sinks each source points at
-    #     sinks = set() # The set of sinks
-    #     sources = set() # The set of source
+    ##########################################################
+    # STEP 1
+    ##########################################################
 
-
-    #     # Find the set of sinks, and sources
-    #     for node in C:
-    #         if C.in_degree(node) == 0: # A source if in degree is zero
-    #             sources.add(node)
-    #         if C.out_degree(node) == 0: # A sink if out degree is zero
-    #             sinks.add(node)
-
-
-    #     # This is calculating the visions of each source
-    #     source_vision = dict()
-    #     for source in sources:
-    #         descendants = nx.descendants(C, source)
-    #         source_vision[source] = set.intersection(set(descendants),sinks)
-
-    # # Using a dfs based implementation to find descendants
-    # elif how_to_find_visions == 1:
-    #     source_vision = dict()  # the dictionary of sinks each source points at
-    #     sinks = set() # The set of sinks
-    #     sources = set() # The set of source
-
-
-    #     # Find the set of sinks, and sources
-    #     for node in C:
-    #         if C.in_degree(node) == 0: # A source if in degree is zero
-    #             sources.add(node)
-    #         if C.out_degree(node) == 0: # A sink if out degree is zero
-    #             sinks.add(node)
-
-
-    #     # This is calculating the visions of each source
-    #     source_vision = dict()
-    #     for source in sources:
-    #         descendants = Condensations.find_descendants(C, source)
-    #         source_vision[source] = set.intersection(set(descendants),sinks)
-
+    # Use fast_step_1 algorithm, to compute sources, sinks, sink_cover, unique_sinks and visions of sources etc
     sources, sinks, source_vision, sink_pre_vision, sink_cover, unique_sinks = fast_step_1(C)
+
+    # Set to sets so that we can do intersections etc
+    sources = set(sources)
+    sinks = set(sinks)
 
     if debug:
         print("************************")
@@ -114,9 +82,8 @@ def fast_strong_connector(G, how_to_find_condensations = 0, disconnected_possibi
         print(source_vision)
         print("************************")
 
-    ### given directed bi graph of sources and sinks, represented by sources, sinks and dictionary of successors of sources
 
-
+    # Do the main body of step 1 adding our edges to the list of edges we're going to add to the original graph.
     m = len(sinks)
     n = len(sources)
 
@@ -124,8 +91,10 @@ def fast_strong_connector(G, how_to_find_condensations = 0, disconnected_possibi
     connected_sinks = set()
     connected_sources = set()
 
+    # Identify the sources which we will make see everything
     first_source = sink_cover[0]
 
+    # Since we known that our list of sources and sinks computed in fast step 1 is already appropriate by construciton, we just add the relevant edges
     for i in range(1, len(sink_cover)):
         if debug:
             print("Step 1 Occurred")
@@ -133,27 +102,9 @@ def fast_strong_connector(G, how_to_find_condensations = 0, disconnected_possibi
         connected_sinks.add(unique_sinks[i-1])
         edges_to_add.append((representatives[unique_sinks[i-1]], representatives[sink_cover[i]])) # Add the edge between the sink and the first source
 
-
-    # # first make it so our first source can 'see' all sinks
-    # while visible_sinks != sinks:
-        
-    #     for source in set.difference(sources, connected_sources):
-    #         if debug:
-    #             print("Step 1 Occurred")
-    #         # Find any possible sinks our selected source can't see yet
-    #         possible_sinks_to_add = list(set.intersection(set.difference(sinks, set(visible_sinks)), set(source_vision[source])))
-
-    #         #If there is a sink we haven't added that can be seen by the source we chose, but not the original source, add it.
-    #         if len(possible_sinks_to_add) != 0:
-    #             sink_to_add = list(set.difference(visible_sinks, connected_sinks))[0] # We connect an unconnected sink in the visible sinks, to the source we chose.
-    #             connected_sinks.add(sink_to_add) # the sink is now connected, and no longer a sink
-    #             edges_to_add.append((representatives[sink_to_add], representatives[source])) # We record the edge we add to our original graph
-    #             visible_sinks = set.union(visible_sinks, set(possible_sinks_to_add)) # We update the list of visible sinks
-    #             connected_sources.add(source) # the source is now connected, and no longer a source
-    #             break
-
-    sources = set(sources)
-    sinks = set(sinks)
+    ##############################################
+    # Step 2
+    ##############################################
 
     # now replace first source repeatedly until all sinks or all sources except one are connected
 
@@ -169,11 +120,14 @@ def fast_strong_connector(G, how_to_find_condensations = 0, disconnected_possibi
                 edges_to_add.append((representatives[possible_sinks_to_add[0]], representatives[first_source])) # Add the edge between the sink and the first source
                 first_source = source # Replace the first source, so we can apply the same algorithm again
 
+    
+    ############################################
+    # Step 3
+    ############################################
     # we are now in the state where either all sources or all sinks are connected, so we just connect the remainder
 
     # in either case we connect the 1 to all the others
 
-    # in either case we connect the 1 to all the others
     remaining_sources = list(set.difference(sources, connected_sources))
     remaining_sinks = list(set.difference(sinks, connected_sinks))
 
@@ -198,7 +152,7 @@ def fast_strong_connector(G, how_to_find_condensations = 0, disconnected_possibi
                 print("I added the following edge in step 3")
                 print(edges_to_add[-1])
         
-
+    # If the graph was disconnected, we could possibly add an edge to itself, and so we remove it
     if disconnected_possibility:
         edges_to_remove = []
         for edge in edges_to_add:
@@ -208,17 +162,13 @@ def fast_strong_connector(G, how_to_find_condensations = 0, disconnected_possibi
         for edge in edges_to_remove:
             edges_to_add.remove(edge)
 
+    # Create a new graph, from a copy of the original, and add the edges we found to it
     edges_required = len(edges_to_add)
-
     P = G.copy()
-    #print(edges_to_add)
     P.add_edges_from(edges_to_add)
 
 
     if debug:
-
-        
-
         print("Added edges:")
         print(edges_to_add)
 
@@ -232,12 +182,14 @@ def fast_strong_connector(G, how_to_find_condensations = 0, disconnected_possibi
 
     if draw:
         nx.draw_networkx(P, arrows = True)
+        plt.title("Augmented Graph")
         plt.show()
 
     if debug:
         print("Added edges:")
         print(edges_to_add)
 
+    # Read out the final results of the algorithm with some key statistics
     if final_readout:
         print("Condensation's Sources")
         print(n)

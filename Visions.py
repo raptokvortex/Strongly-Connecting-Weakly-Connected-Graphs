@@ -14,7 +14,7 @@ class vertex:
     def __str__(self):
         return f"{self.rep}"
     
-
+# Original version using sets
 def vision_finder(G):
     """For G an acylcic graph, returns a list of sources, a list of sinks, and a dictionary of sources with entries being their visions. 
     (The sinks where there is a path from that source to the sink)"""
@@ -58,6 +58,7 @@ def vision_finder(G):
 
     return true_sources, true_sinks, visions
 
+# Updated version using lists, which is faster
 def vision_finder2(G):
     """For G an acylcic graph, returns a list of sources, a list of sinks, and a dictionary of sources with entries being their visions. 
     (The sinks where there is a path from that source to the sink)"""
@@ -88,6 +89,7 @@ def vision_finder2(G):
                     vertices[predecessor].backprops += 1 # we record the number of times we back propogate
                     vertices[predecessor].vision = set.union(vertices[predecessor].vision ,vrtx.vision) # We add the vision of any vertices we can reach
                     if vertices[predecessor].backprops == vertices[predecessor].outdegree: # for the next step we treat the vertex as a sink, like in the previous step
+                                                                                           # as we have completed all the back propagations
                         new_sinks.add(vertices[predecessor])
         sinklength = len(new_sinks)
 
@@ -102,54 +104,6 @@ def vision_finder2(G):
     return true_sources, true_sinks, visions
     
 # ######################################################################################
-# # Testing new algorithm
-
-# G = nx.scale_free_graph(100, seed = 2)
-
-# # Reduce G to its strongly connected components, with the nodes of the components being represented by a representative of G
-# C = nx.condensation(G)
-
-# vision = dict()  # the dictionary of sinks each source points at
-# sinks = set() # The set of sinks
-# sources = set() # The set of source
-
-
-# # Find the set of sinks, and sources
-# for node in C:
-#     if C.in_degree(node) == 0: # A source if in degree is zero
-#         sources.add(node)
-#     if C.out_degree(node) == 0: # A sink if out degree is zero
-#         sinks.add(node)
-
-
-# # This is calculating the visions of each source
-# vision = dict()
-# for source in sources:
-#     descendants = nx.descendants(C, source)
-#     vision[source] = set.intersection(set(descendants),sinks)
-
-# new_sources, new_sinks, new_vision = vision_finder(C)
-
-# print("Original: Sources")
-# print(sources)
-# print("New algorithm: Sources")
-# print(set(new_sources))
-
-# print("*************************************************")
-# print("Original: Sinks")
-# print(sinks)
-# print("New algorithm: Sinks")
-# print(set(new_sinks))
-
-# print("*************************************************")
-# print("Original: Vision")
-# print(vision)
-# print("New algorithm: Vision")
-# print(new_vision)
-
-# print(vision == new_vision)
-
-
 
 
         
